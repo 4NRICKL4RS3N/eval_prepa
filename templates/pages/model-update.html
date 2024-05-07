@@ -1,0 +1,10 @@
+{% extends "components/dashboard_base.html" %}
+
+{% block title %}
+    Update {{ model_name }} id:{{ object.id }}
+{% endblock %}
+
+{% block content %}
+	{% include 'components/form.html' with action="" method="post" form=form %}
+    <a href="{% url 'index' model_name %}"> retour</a>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "components/dashboard_base.html" %}
+
+{% block title %}
+    {{ model_name }}
+{% endblock %}
+
+{% block content %}
+    <div id="error-message" style="display:none;"></div>
+    {% include 'components/form.html' with id="save-form" action="" method="post" form=form %}
+
+    <form method="get">
+        {% csrf_token %}
+        {{ search_form.as_p }}
+        <button type="submit">Search</button>
+    </form>
+    <a class="btn btn-primary" href="{% url 'index' model_name %}">Reset</a>
+
+    {% if data %}
+        {% include 'components/table-data.html' with fields=fields data=data model_name=model_name %}
+    {% else %}
+        <p>No result</p>
+    {% endif %}
+{% endblock %}
+
+<script>
+$(document).ready(function(){
+    $('#save-form').on('submit', function(event){
+        event.preventDefault();
+        $.ajax({
+            url: "{% url 'index' model_name %}",
+            type: "post",
+            data: $(this).serialize(),
+            success: function(response){
+                if (response.success){
+                    alert("Données validées avec succès !");
+                } else {
+                    var errors = response.errors;
+                    var errorMessage = "";
+                    for (var field in errors) {
+                        errorMessage += "<p>" + field + ": " + errors[field].join(", ") + "</p>";
+                    }
+                    $('#error-message').html(errorMessage);
+                    $('#error-message').show();
+                }
+            }
+        });
+    });
+});
+</script>

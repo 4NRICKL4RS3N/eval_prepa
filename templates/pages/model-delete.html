@@ -1,0 +1,17 @@
+{% extends "components/dashboard_base.html" %}
+
+{% block title %}
+    Delete {{ model_name }}
+{% endblock %}
+
+{% block content %}
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" value="{{ model_name }}">
+        <p>Do you really want to delete id:{{ object.id }}</p>
+        <p>
+            <input type="submit" value="Yes">
+            <a href="{% url 'index' model_name %}">No</a>
+        </p>
+    </form>
+{% endblock %}
