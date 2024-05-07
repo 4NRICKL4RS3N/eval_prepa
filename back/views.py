@@ -56,7 +56,7 @@ class ModelListView(View):
                         elif operator == '<':
                             lookup += '__lt'
                         elif operator == '=':
-                            lookup += '__exact'
+                            lookup += '__exactt'
                         query &= Q(**{lookup: value})
             objects_list = model.objects.filter(query)
         else:
