@@ -10,16 +10,16 @@ class RoleForm(ModelForm):
     def clean_level(self):
         level = self.cleaned_data['level']
         if level < 1 or level > 3:
-            raise forms.ValidationError('Level must be between 1 and 3')
+            raise forms.ValidationError('must be between 1 and 3')
         return level
 
     # mametaka css amle form
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for field in self.fields.values():
+        for field_name, field in self.fields.items():
             field.widget.attrs.update({
                 'class': 'form-control',
-                'id': 'inputText'
+                'id': 'input'+field_name
             })
             field.label_suffix = ''
 

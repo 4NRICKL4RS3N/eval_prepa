@@ -6,7 +6,7 @@ from django.db import models
 class Role(models.Model):
     name = models.CharField(max_length=50)
     level = models.IntegerField(default=0)
-    fields_to_show = ['name', 'level']
+    fields_to_show = ['id', 'name', 'level']
 
 
 class User(models.Model):

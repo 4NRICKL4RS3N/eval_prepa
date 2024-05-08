@@ -1,15 +1,20 @@
+import base64
+import datetime
+import io
 import json
 
 from django.apps import apps
 from django.db import models
 from django.db.models import Q
-from django.http import HttpResponseRedirect, Http404, JsonResponse, HttpResponseBadRequest
+from django.http import HttpResponseRedirect, Http404, JsonResponse, HttpResponseBadRequest, HttpResponse, FileResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.views import View
 
 from django.views.generic import TemplateView, DetailView, DeleteView
 from django.views.generic import ListView
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 from back.models import User
 from back.models import Role
@@ -23,11 +28,38 @@ from back.search_forms import SearchForm
 
 def get_model(model_name):
     try:
-        print("--------------------------------------------------------")
         model = apps.get_model("back", model_name)
         return model
     except KeyError:
         raise Http404("Model does not exist")
+
+
+def generate_pdf(model_name, objects_list, fields):
+    generated_date = datetime.datetime.now().strftime("%Y-%m-%d")
+
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(100, 750, model_name)
+
+    p.setFont("Helvetica", 12)
+    p.drawString(100, 730, "Generated on: " + generated_date)
+
+    y = 700  # initial x pos
+    x = 100  # initial y pos
+    for obj in objects_list:
+        x = 100
+        for field in fields:
+            p.drawString(x, y, str(getattr(obj, field)))
+            x += 100
+        y -= 20
+
+    p.showPage()
+    p.save()
+
+    buffer.seek(0)
+    return buffer
 
 
 class ModelListView(View):
@@ -35,6 +67,9 @@ class ModelListView(View):
 
     def get(self, request, model_name):
         model = get_model(model_name)
+
+        sort_by = request.GET.get('sort_by', 'id')  # id io le default raha tsy misy sort_by ao amn le request
+        sort_order = request.GET.get('sort_order', 'asc')
 
         search_form = SearchForm(request.GET, model=model)
         form = form_factory(model)
@@ -49,7 +84,6 @@ class ModelListView(View):
                     if search_form.cleaned_data.get(field.name):
                         operator = search_form.cleaned_data.get(f'{field.name}_operator')
                         value = search_form.cleaned_data[field.name]
-                        # lookup = f'{field.name}__{operator}'
                         lookup = f'{field.name}'
                         if operator == '>':
                             lookup += '__gt'
@@ -62,7 +96,24 @@ class ModelListView(View):
         else:
             objects_list = []
 
-        return render(request, self.template_name, {'form': form, 'search_form': search_form, 'data': objects_list, 'fields': model.fields_to_show, 'model_name': model_name})
+        if sort_order == 'asc':
+            objects_list = objects_list.order_by(sort_by)
+        else:
+            objects_list = objects_list.order_by("-" + sort_by)
+
+        if request.GET.get('export'):
+            buffer = generate_pdf(model_name, objects_list, model.fields_to_show)
+            # generated_date = datetime.datetime.now().strftime("%Y-%m-%d")
+            # response = FileResponse(buffer, content_type='application/pdf')
+            # response['Content-Disposition'] = f'attachment; filename="{model_name}_{generated_date}.pdf"'
+            pdf_content = buffer.getvalue()
+            encoded_pdf = base64.b64encode(pdf_content).decode('utf-8')
+            embedded_pdf = f'<embed src="data:application/pdf;base64,{encoded_pdf}" type="application/pdf" width="100%" height="600px" />'
+            return HttpResponse(embedded_pdf)
+
+        return render(request, self.template_name,
+                      {'form': form, 'search_form': search_form, 'data': objects_list, 'fields': model.fields_to_show,
+                       'model_name': model_name, 'sort_order': sort_order})
 
     def post(self, request, model_name):
         model = get_model(model_name)
@@ -70,13 +121,10 @@ class ModelListView(View):
         form = form_factory(model, request=request.POST)
         if form.is_valid():
             form.save()
-            # return JsonResponse({'success': True})
             return self.get(request, model_name)
         else:
             errors = dict([(k, [str(e) for e in v]) for k, v in form.errors.items()])
-            return HttpResponseBadRequest(json.dumps({'errors': errors}), content_type='application/json')
-            # return JsonResponse({'errors': errors}, status=403)
-            # return self.get(request, model_name)
+            return JsonResponse({'success': False, 'errors': errors})
 
 
 class ModelDeleteView(View):
@@ -92,6 +140,7 @@ class ModelDeleteView(View):
         instance = get_object_or_404(model, pk=pk)
         instance.delete()
         return redirect(reverse('index', args=[model_name]))
+
 
 class ModelUpdateView(View):
     template_name = 'pages/model-update.html'
@@ -111,6 +160,7 @@ class ModelUpdateView(View):
             return redirect(reverse('index', args=[model_name]))
         else:
             return self.get(request, model_name, pk)
+
 
 class ModelDetailView(View):
     template_name = 'pages/model-detail.html'

@@ -16,11 +16,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from back.views import ModelListView, ModelDeleteView, ModelUpdateView
+from back.views import ModelListView, ModelDeleteView, ModelUpdateView, generate_pdf
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('dashboard/<str:model_name>', ModelListView.as_view(), name='index'),
     path('dashboard/<str:model_name>/<int:pk>/delete/', ModelDeleteView.as_view(), name='model-delete'),
     path('dashboard/<str:model_name>/<int:pk>/update/', ModelUpdateView.as_view(), name='model-update'),
-]
+    ]
