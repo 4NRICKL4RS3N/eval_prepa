@@ -1,4 +1,5 @@
 import base64
+import csv
 import datetime
 import io
 import json
@@ -8,11 +9,13 @@ from django.db import models
 from django.db.models import Q
 from django.http import HttpResponseRedirect, Http404, JsonResponse, HttpResponseBadRequest, HttpResponse, FileResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
 from django.views import View
 
 from django.views.generic import TemplateView, DetailView, DeleteView
 from django.views.generic import ListView
+import pdfkit
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
@@ -62,6 +65,41 @@ def generate_pdf(model_name, objects_list, fields):
     return buffer
 
 
+def generate_pdf2(model_name, objects_list, fields):
+    context = {
+        'model_name': model_name,
+        'data': objects_list,
+        'fields': fields
+    }
+    html_content = render_to_string('pages/table-data-pdf.html', context)
+    options = {
+        'page-size': 'Letter',
+        'margin-top': '0.75in',
+        'margin-right': '0.75in',
+        'margin-bottom': '0.75in',
+        'margin-left': '0.75in',
+        # 'disable-local-file-access': None,
+        # 'enable-local-file-access': "",
+    }
+    pdf_file = pdfkit.from_string(html_content, False, options=options)
+    buffer = io.BytesIO(pdf_file)
+    return buffer
+
+
+def generate_csv(objects_list, fields):
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+
+    writer.writerow(fields)
+
+    for obj in objects_list:
+        row = [str(getattr(obj, field)) for field in fields]
+        writer.writerow(row)
+
+    buffer.seek(0)
+    return buffer
+
+
 class ModelListView(View):
     template_name = 'pages/index.html'
 
@@ -102,14 +140,18 @@ class ModelListView(View):
             objects_list = objects_list.order_by("-" + sort_by)
 
         if request.GET.get('export'):
-            buffer = generate_pdf(model_name, objects_list, model.fields_to_show)
-            # generated_date = datetime.datetime.now().strftime("%Y-%m-%d")
-            # response = FileResponse(buffer, content_type='application/pdf')
-            # response['Content-Disposition'] = f'attachment; filename="{model_name}_{generated_date}.pdf"'
-            pdf_content = buffer.getvalue()
-            encoded_pdf = base64.b64encode(pdf_content).decode('utf-8')
-            embedded_pdf = f'<embed src="data:application/pdf;base64,{encoded_pdf}" type="application/pdf" width="100%" height="600px" />'
-            return HttpResponse(embedded_pdf)
+            if request.GET.get('export') == "pdf":
+                buffer = generate_pdf2(model_name, objects_list, model.fields_to_show)
+                pdf_content = buffer.getvalue()
+                encoded_pdf = base64.b64encode(pdf_content).decode('utf-8')
+                embedded_pdf = f'<embed src="data:application/pdf;base64,{encoded_pdf}" type="application/pdf" width="100%" height="600px" />'
+                return HttpResponse(embedded_pdf)
+            if request.GET.get('export') == "csv":
+                buffer = generate_csv(objects_list, model.fields_to_show)
+                generated_date = datetime.datetime.now().strftime("%Y-%m-%d")
+                response = HttpResponse(buffer, content_type='text/csv')
+                response['Content-Disposition'] = f'attachment; filename="{model_name}_{generated_date}.csv"'
+                return response
 
         return render(request, self.template_name,
                       {'form': form, 'search_form': search_form, 'data': objects_list, 'fields': model.fields_to_show,
@@ -120,10 +162,13 @@ class ModelListView(View):
 
         form = form_factory(model, request=request.POST)
         if form.is_valid():
+            print("valid")
             form.save()
             return self.get(request, model_name)
         else:
             errors = dict([(k, [str(e) for e in v]) for k, v in form.errors.items()])
+            print("not valid")
+            print(errors)
             return JsonResponse({'success': False, 'errors': errors})
 
 

@@ -106,7 +106,7 @@ $(document).ready(function(){
             type: "post",
             data: $(this).serialize(),
             success: function(response){
-                if (!response.success){
+                if (response.success === false){
                     var errors = response.errors;
                     var errorMessage = "";
                     var input_id = 'input'
@@ -118,6 +118,9 @@ $(document).ready(function(){
                     }
                     $('#error-message').html(errorMessage);
                     $('#error-message').show();
+                }
+                else {
+                    location.reload()
                 }
             }
         });

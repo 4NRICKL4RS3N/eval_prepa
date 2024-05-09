@@ -42,6 +42,8 @@ class Task(models.Model):
     description = models.TextField(max_length=256)
     date_end = models.DateField()
     status = models.IntegerField(choices=STATUS_CHOICES, default=0)
+    fields_to_show = ['project', 'title', 'description', 'date_end', 'status']
+
 
 
 class Comment(models.Model):

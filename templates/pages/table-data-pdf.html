@@ -1,0 +1,49 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+{#    <link href="{% static 'css/vendor/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">#}
+{#    <link href="{% static 'css/vendor/simple-datatables/style.css' %}" rel="stylesheet">#}
+
+    <!-- Template Main CSS File -->
+{#    <link href="{% static 'css/dashboard_base_style.css' %}" rel="stylesheet">#}
+</head>
+<body>
+{% load custom_tags %}
+
+<style>
+    .table_head:hover {
+        cursor: pointer;
+    }
+</style>
+
+<h1>{{ model_name }}</h1>
+
+<table class="table" border="1">
+    <thead>
+    <tr>
+        {% for field in fields %}
+            <th class="table_head">
+                {{ field }}
+            </th>
+        {% endfor %}
+    </tr>
+    </thead>
+    <tbody>
+    {% for item in data %}
+        <tr>
+            {% for field in fields %}
+                {% if item|get_attribute:field|get_type == "str" %}
+                    <td style="text-align: left;">{{ item|get_attribute:field }}</td>
+                {% else %}
+                    <td style="text-align: right;">{{ item|get_attribute:field }}</td>
+                {% endif %}
+            {% endfor %}
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</body>
+</html>
