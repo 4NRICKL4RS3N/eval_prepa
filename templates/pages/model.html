@@ -6,7 +6,7 @@
 
 {% block content %}
     <div id="error-message" class="alert alert-danger" style="display:none;" role="alert"></div>
-    {% include 'components/form.html' with id="save-form" action="" method="post" form=form %}
+    {% include 'components/form.html' with id="save-form" action="" method="post" form=form enctype="multipart/form-data" %}
 
     <form method="get">
         {% csrf_token %}
@@ -20,4 +20,11 @@
     {% else %}
         <p>No result</p>
     {% endif %}
+    
+    <form id="import-csv" action="{% url 'import-csv' model_name %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <h2>Import from csv</h2>
+        <input type="file" name="csv-file">
+        <input type="submit">
+    </form>
 {% endblock %}

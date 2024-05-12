@@ -28,7 +28,7 @@ class RoleForm(ModelForm):
 class UserForm(ModelForm):
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'email', 'password']
+        fields = ['first_name', 'last_name', 'email', 'password', 'status', 'profile_picture']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -77,12 +77,12 @@ class TaskForm(ModelForm):
             field.label_suffix = ''
 
 
-def form_factory(model, request=None, instance=None):
+def form_factory(model, request_post=None, request_file=None, instance=None):
     if model == Role:
-        return RoleForm(request, instance=instance)
+        return RoleForm(request_post, instance=instance)
     if model == User:
-        return UserForm(request, instance=instance)
+        return UserForm(request_post, request_file, instance=instance)
     if model == Project:
-        return ProjectForm(request, instance=instance)
+        return ProjectForm(request_post, instance=instance)
     if model == Task:
-        return TaskForm(request, instance=instance)
+        return TaskForm(request_post, instance=instance)

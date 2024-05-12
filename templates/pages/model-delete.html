@@ -10,7 +10,7 @@
         <input type="hidden" value="{{ model_name }}">
         <p>Do you really want to delete id:{{ object.id }}</p>
         <p>
-            <input type="submit" value="Yes">
+            <input type="submit" value="Yes" autofocus>
             <a href="{% url 'index' model_name %}">No</a>
         </p>
     </form>

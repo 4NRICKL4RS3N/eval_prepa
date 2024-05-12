@@ -1,0 +1,35 @@
+{% extends "components/dashboard_base.html" %}
+
+{% block title %}
+    Dashboard
+{% endblock %}
+
+{% block content %}
+    {% include "components/card-little.html" with title="test" value1="5" value2="50" %}
+
+    <canvas id="salesChart"></canvas>
+    <script>
+        var ctx = document.getElementById( 'salesChart' ).getContext( '2d' );
+        var myChart = new Chart( ctx, {
+            type: 'line', // Change this to the type of chart you want
+            data: {
+                labels: {{ months|safe }},
+                datasets: [{
+                    label: 'Sales Data',
+                    data: {{ sales_data|safe }},
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        } );
+    </script>
+
+{% endblock %}

@@ -6,7 +6,7 @@
     }
 </style>
 
-<table class="table">
+<table id="data_table" class="table datatable">
     <thead>
     <tr>
         {% for field in fields %}
@@ -17,6 +17,9 @@
                         </span>
             </th>
         {% endfor %}
+        <th></th>
+        <th></th>
+        <th></th>
     </tr>
     </thead>
     <tbody>

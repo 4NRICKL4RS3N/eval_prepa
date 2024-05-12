@@ -5,6 +5,6 @@
 {% endblock %}
 
 {% block content %}
-	{% include 'components/form.html' with action="" method="post" form=form %}
+    {% include 'components/form.html' with action="" method="post" form=form enctype="multipart/form-data" %}
     <a href="{% url 'index' model_name %}"> retour</a>
 {% endblock %}

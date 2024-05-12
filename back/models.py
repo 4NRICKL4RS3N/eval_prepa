@@ -14,7 +14,24 @@ class User(models.Model):
     last_name = models.CharField(max_length=50)
     email = models.EmailField(max_length=150)
     password = models.CharField(max_length=200)
-    fields_to_show = ['first_name', 'last_name', 'email']
+    status = models.IntegerField(default=0)
+    profile_picture = models.ImageField(upload_to='back/static/img/profile_pictures/')
+    fields_to_show = ['first_name', 'last_name', 'email', 'status', 'profile_picture']
+
+    def check_password(self, password):
+        if password == self.password:
+            return True
+        return False
+
+    @staticmethod
+    def authenticate(email, password):
+        user = User.objects.filter(email=email)
+        if len(user) > 0:
+            user = user[0]
+            if user.check_password(password):
+                return user
+            return 2
+        return 1
 
 
 class Project(models.Model):

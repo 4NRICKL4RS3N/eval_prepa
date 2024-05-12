@@ -5,12 +5,14 @@ import io
 import json
 
 from django.apps import apps
+from django.contrib.sessions.models import Session
 from django.db import models
 from django.db.models import Q
 from django.http import HttpResponseRedirect, Http404, JsonResponse, HttpResponseBadRequest, HttpResponse, FileResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.views import View
 
 from django.views.generic import TemplateView, DetailView, DeleteView
@@ -100,8 +102,45 @@ def generate_csv(objects_list, fields):
     return buffer
 
 
+class ImportCSVView(View):
+    def post(self, request, model_name):
+        if request.FILES.get('csv-file'):
+            csv_file = request.FILES['csv-file']
+            csv_data = csv_file.read().decode('utf-8').splitlines()
+
+            if csv_data and csv_data[0].startswith('\ufeff'):
+                csv_data[0] = csv_data[0][1:]
+
+            csv_reader = csv.reader(csv_data, delimiter=',')
+            header = next(csv_reader)
+
+            model = get_model(model_name)
+            error_row = []
+            success_row_number = 0
+            fail_row_number = 0
+            for row in csv_reader:
+                # print(row)
+                dictio = {}
+                for i in range(len(header)):
+                    dictio[header[i]] = row[i]
+                # print(dictio)
+                form = form_factory(model, request_post=dictio)
+                if form.is_valid():
+                    form.save()
+                    success_row_number += 1
+                else:
+                    print(form.errors)
+                    fail_row_number += 1
+                    error_row.append(row)
+            print(success_row_number)
+            print(error_row)
+            print(fail_row_number)
+            return JsonResponse({'success': success_row_number, 'errors': error_row, 'fail': fail_row_number})
+        return JsonResponse({'success': 0})
+
+
 class ModelListView(View):
-    template_name = 'pages/index.html'
+    template_name = 'pages/model.html'
 
     def get(self, request, model_name):
         model = get_model(model_name)
@@ -160,7 +199,10 @@ class ModelListView(View):
     def post(self, request, model_name):
         model = get_model(model_name)
 
-        form = form_factory(model, request=request.POST)
+        print(request.POST)
+        print(request.FILES)
+
+        form = form_factory(model, request_post=request.POST, request_file=request.FILES)
         if form.is_valid():
             print("valid")
             form.save()
@@ -193,13 +235,13 @@ class ModelUpdateView(View):
     def get(self, request, model_name, pk):
         model = get_model(model_name)
         instance = get_object_or_404(model, pk=pk)
-        form = form_factory(model, instance=instance)
+        form = form_factory(model=model, instance=instance)
         return render(request, self.template_name, {'object': instance, 'model_name': model_name, 'form': form})
 
     def post(self, request, model_name, pk):
         model = get_model(model_name)
         instance = get_object_or_404(model, pk=pk)
-        form = form_factory(model, request=request.POST, instance=instance)
+        form = form_factory(model, request_post=request.POST, instance=instance)
         if form.is_valid():
             form.save()
             return redirect(reverse('index', args=[model_name]))
@@ -209,3 +251,60 @@ class ModelUpdateView(View):
 
 class ModelDetailView(View):
     template_name = 'pages/model-detail.html'
+    user_template_name = 'pages/model-detail.html'
+
+
+class AdminIndexView(View):
+    template_name = 'pages/index_admin.html'
+
+    def get(self, request):
+        months = ['January', 'February', 'March', 'April', 'May', 'June', 'July']
+        sales_data = [100, 200, 150, 300, 250, 350, 400]  # Example sales data
+
+        context = {'months': months, 'sales_data': sales_data}
+        return render(request, self.template_name, context)
+
+
+class UserIndexView(View):
+    template_name = 'pages/index_user.html'
+
+    def get(self, request):
+        user_id = request.session.get('user_id')
+        if user_id:
+            print('aoooo')
+            user = User.objects.get(pk=user_id)
+            return render(request, self.template_name, {'user': user})
+        print('tsy aoooo')
+        return redirect('login')
+
+
+class Login(View):
+    template_name = 'pages/login.html'
+
+    def get(self, request):
+        return render(request, self.template_name)
+
+    def post(self, request):
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+
+        user = User.authenticate(email, password)
+        if user == 1:
+            return JsonResponse({'success': False, 'errors': "email introuvable"})
+        elif user == 2:
+            return JsonResponse({'success': False, 'errors': "mot de passe incorecte"})
+
+        request.session['user_id'] = user.id
+
+        if user.status == 0:
+            return JsonResponse({'success': True, 'redirect_url': reverse('welcome')})
+            # return redirect(reverse('welcome'))
+        if user.status == 1:
+            return JsonResponse({'success': True, 'redirect_url': reverse('index/user')})
+            # return redirect(reverse('index'), args=["user"])
+
+
+class Logout(View):
+    def get(self, request):
+        request.session.flush()
+        return redirect('login')

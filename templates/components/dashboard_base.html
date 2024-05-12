@@ -20,11 +20,16 @@
     <link href="{% static 'css/vendor/remixicon/remixicon.css' %}" rel="stylesheet">
     <link href="{% static 'css/vendor/simple-datatables/style.css' %}" rel="stylesheet">
 
+    <link href="https://cdn.datatables.net/2.0.7/css/dataTables.dataTables.css" rel="stylesheet">
+
     <!-- Template Main CSS File -->
     <link href="{% static 'css/dashboard_base_style.css' %}" rel="stylesheet">
-    
+
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+
     {# font awesome #}
     <link href="{% static 'css/font_awesome.all.min.css' %}" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script src="{% static 'js/jquery.min.js' %}"></script>
 </head>
@@ -57,7 +62,7 @@
 
     <div class="pagetitle">
         <h1>{% block title %}
-        	Dashboard
+            Dashboard
         {% endblock %}</h1>
     </div><!-- End Page Title -->
 
@@ -81,64 +86,112 @@
 <!-- Vendor JS Files -->
 <script src="{% static 'css/vendor/apexcharts/apexcharts.min.js' %}"></script>
 <script src="{% static 'css/vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
-<script src="{% static 'css/vendor/chart.js/chart.umd.js' %}"></script>
+{#<script src="{% static 'css/vendor/chart.js/chart.umd.js' %}"></script>#}
 <script src="{% static 'css/vendor/echarts/echarts.min.js' %}"></script>
 <script src="{% static 'css/vendor/quill/quill.min.js' %}"></script>
-<script src="{% static 'css/vendor/simple-datatables/simple-datatables.js' %}"></script>
+{#<script src="{% static 'css/vendor/simple-datatables/simple-datatables.js' %}"></script>#}
+{#<script src="https://cdn.jsdelivr.net/npm/simple-datatables@latest"></script>#}
+<script src="https://cdn.datatables.net/2.0.7/js/dataTables.js"></script>
 <script src="{% static 'css/vendor/tinymce/tinymce.min.js' %}"></script>
 <script src="{% static 'css/vendor/php-email-form/validate.js' %}"></script>
 
 <!-- Template Main JS File -->
-<script src="{% static 'js/dashboard_base_main.js' %}"></script>
+{#<script src="{% static 'js/dashboard_base_main.js' %}"></script>#}
 
-{# ajax momoaka message d'erreur #}
-<script>
-$(document).ready(function(){
-    $('#save-form').on('submit', function(event){
-        event.preventDefault();
-        $.ajaxSetup( {
-            beforeSend: function (xhr, settings) {
-                xhr.setRequestHeader( "X-CSRFToken", "{{ csrf_token }}" );
-            }
-        } );
-        $.ajax({
-            url: "{% url 'index' model_name %}",
-            type: "post",
-            data: $(this).serialize(),
-            success: function(response){
-                if (response.success === false){
-                    var errors = response.errors;
-                    var errorMessage = "";
-                    var input_id = 'input'
-                    for (var field in errors) {
-                        input_id += field
-                        $("#"+input_id).addClass('is-invalid');
-                        {#$('#save-form').append('<label for="'+ input_id +'">'+ errors[field].join(", ") +'</label>')#}
-                        errorMessage += "<p>" + field + ": " + errors[field].join(", ") + "</p>";
+
+{% if model_name %}
+    {# ajax momoaka message d'erreur #}
+    <script>
+        $( document ).ready( function () {
+            $( '#save-form' ).on( 'submit', function (event) {
+                event.preventDefault();
+
+                var formData = new FormData( this );
+
+                console.log( formData );
+
+                $.ajax( {
+                    url: "{% url 'index' model_name %}",
+                    type: "post",
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (response) {
+                        if (response.success === false) {
+                            var errors = response.errors;
+                            var errorMessage = "";
+                            var input_id = 'input'
+                            for (var field in errors) {
+                                input_id += field
+                                $( "#" + input_id ).addClass( 'is-invalid' );
+                                {#$('#save-form').append('<label for="'+ input_id +'">'+ errors[field].join(", ") +'</label>')#}
+                                errorMessage += "<p>" + field + ": " + errors[field].join( ", " ) + "</p>";
+                            }
+                            $( '#error-message' ).html( errorMessage );
+                            $( '#error-message' ).show();
+                        } else {
+                            location.reload()
+                        }
                     }
-                    $('#error-message').html(errorMessage);
-                    $('#error-message').show();
-                }
-                else {
-                    location.reload()
-                }
-            }
-        });
-        return false;
-    });
-});
-</script>
+                } );
+                return false;
+            } );
+        } );
+    </script>
+
+    {# ajax magnano import csv #}
+    <script>
+        $( document ).ready( function () {
+            $( '#import-csv' ).on( 'submit', function (event) {
+                event.preventDefault();
+
+                var formData = new FormData( this );
+
+                console.log( formData );
+
+                $.ajax( {
+                    url: "{% url 'import-csv' model_name %}",
+                    type: "post",
+                    data: formData,
+                    processData: false,  // Prevent jQuery from processing the data
+                    contentType: false,  // Prevent jQuery from setting contentType
+                    success: function (response) {
+                        if (response.fail > 0) {
+                            var errors = response.errors;
+                            var errorMessage = "";
+                            for (var field in errors) {
+                                {#$('#save-form').append('<label for="'+ input_id +'">'+ errors[field].join(", ") +'</label>')#}
+                                errorMessage += "<p>" + field + ": " + errors[field].join( ", " ) + "</p>";
+                            }
+                            $( '#error-message' ).html( errorMessage );
+                            $( '#error-message' ).show();
+                        } else {
+                            location.reload()
+                        }
+                    }
+                } );
+                return false;
+            } );
+        } );
+    </script>
+{% endif %}
 
 {# sort eo amle head anle table #}
 <script>
-    $(document).ready(function() {
-        $('.table_head').click(function() {
-            var column = $(this).attr('column');
-            var currentOrder = $(this).attr('order');
+    $( document ).ready( function () {
+        $( '.table_head' ).click( function () {
+            var column = $( this ).attr( 'column' );
+            var currentOrder = $( this ).attr( 'order' );
             var newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
-            window.location.href = window.location.pathname + '?sort_by=' + column + '&sort_order=' + newOrder;
-        });
-    });
+            window.location.href = window.location.pathname + '?sort_by=' + column + '&sort_order=' + newOrder + "#data_table";
+        } );
+    } );
+</script>
+
+<script>
+    new DataTable( '#data_table', {
+        pagingType: 'simple_numbers'
+    } );
 </script>
 
 </body>
